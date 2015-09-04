@@ -22,6 +22,8 @@ import com.google.common.collect.Maps;
 /**
  *  1、 getXXX_1与getXXX_2的区别只在返回值的类型不同，处理过程是一样的。
  *  2、 查找（select）时，如果调用的名字不是叫【XXXByColumnNames】，那么基本上就是【select *】 了
+ *  3、getXXX_2 与getXXX_2_2的区别是，前者返回Map<String, String>，后者返回Map<String, Object>。这个方要是由于java泛型造成的不便。。
+ *  （但是其实上，值是没有变化的）
  */
 public final class SqliteTools {
 	 
@@ -157,6 +159,36 @@ public final class SqliteTools {
 	}
 	
 	
+	public static Map<String, Object> getOne_2_2(final Connection conn, final String tableName, final String where, final String orderBy, final Long offset){
+		final StringBuilder sqlBuilder = new StringBuilder();
+		sqlBuilder.append("select * from `").append(tableName).append("` ");
+		if(!Strings.isNullOrEmpty(where)){
+			sqlBuilder.append(" where ")/*.append(" where 1=1 ")*/.append(where).append(" ");
+		}
+		if(!Strings.isNullOrEmpty(orderBy)){
+			sqlBuilder.append(" ").append(orderBy).append(" ");
+		}
+		if(offset != null && offset >= 0){
+			sqlBuilder.append(" limit 1 ").append(" offset ").append(offset).append(" ");
+		}
+		final String sql = sqlBuilder.toString();
+		try (final Statement st = conn.createStatement();final ResultSet rs = st.executeQuery(sql)){
+			final ResultSetMetaData meta = rs.getMetaData();
+			final int columnCount = meta.getColumnCount();
+			while(rs.next()){
+				final Map<String, Object> row = Maps.newHashMap();
+				for(int i=1; i<=columnCount; i++){
+					row.put(meta.getColumnName(i), rs.getString(i));
+				}
+				return row;
+			}
+			return null;
+		}catch(Exception e){
+			throw new IllegalArgumentException("查询sqlite失败", e);
+		}
+	}
+	
+	
 	public static Map<String, String> getOneByColumnNames_2(final Connection conn, final String tableName,final String[] columnNames , final String where, final String orderBy, final Long offset){
 		if(columnNames == null || columnNames.length <= 0){
 			throw new IllegalArgumentException();
@@ -178,6 +210,39 @@ public final class SqliteTools {
 //			final int columnCount = meta.getColumnCount();
 			while(rs.next()){
 				final Map<String, String> row = Maps.newHashMap();
+				for(int i=1; i<=columnNames.length; i++){
+					row.put(columnNames[i-1], rs.getString(i));//这里不能用rs.getString(【columnNames[i]】)
+				}
+				return row;
+			}
+			return null;
+		}catch(Exception e){
+			throw new IllegalArgumentException("查询sqlite失败", e);
+		}
+	}
+	
+	
+	public static Map<String, Object> getOneByColumnNames_2_2(final Connection conn, final String tableName,final String[] columnNames , final String where, final String orderBy, final Long offset){
+		if(columnNames == null || columnNames.length <= 0){
+			throw new IllegalArgumentException();
+		}
+		final StringBuilder sqlBuilder = new StringBuilder();
+		sqlBuilder.append("select ").append(columnNamesStr(columnNames)).append(" from `").append(tableName).append("` ");
+		if(!Strings.isNullOrEmpty(where)){
+			sqlBuilder.append(" where ")/*.append(" where 1=1 ")*/.append(where).append(" ");
+		}
+		if(!Strings.isNullOrEmpty(orderBy)){
+			sqlBuilder.append(" ").append(orderBy).append(" ");
+		}
+		if(offset != null && offset >= 0){
+			sqlBuilder.append(" limit 1 ").append(" offset ").append(offset).append(" ");
+		}
+		final String sql = sqlBuilder.toString();
+		try (final Statement st = conn.createStatement();final ResultSet rs = st.executeQuery(sql)){
+//			final ResultSetMetaData meta = rs.getMetaData();
+//			final int columnCount = meta.getColumnCount();
+			while(rs.next()){
+				final Map<String, Object> row = Maps.newHashMap();
 				for(int i=1; i<=columnNames.length; i++){
 					row.put(columnNames[i-1], rs.getString(i));//这里不能用rs.getString(【columnNames[i]】)
 				}
@@ -294,6 +359,41 @@ public final class SqliteTools {
 		}
 	}
 	
+	public static List<Map<String, Object>> getAll_2_2(final Connection conn, final String tableName, final String where, final String orderBy, final Long offset, final Long limit){
+		final StringBuilder sqlBuilder = new StringBuilder();
+		sqlBuilder.append("select * from `").append(tableName).append("` ");
+		if(!Strings.isNullOrEmpty(where)){
+			sqlBuilder.append(" where ")/*.append(" where 1=1 ")*/.append(where).append(" ");
+		}
+		if(!Strings.isNullOrEmpty(orderBy)){
+			sqlBuilder.append(" ").append(orderBy).append(" ");
+		}
+		if(limit != null && limit >= 0){
+			sqlBuilder.append(" limit ").append(limit).append(" ");
+		}
+		if(offset != null && offset >= 0){
+			sqlBuilder.append(" offset ").append(offset).append(" ");
+		}
+		final String sql = sqlBuilder.toString();
+		final List<Map<String, Object>> r = Lists.newArrayList();
+		try (final Statement st = conn.createStatement();final ResultSet rs = st.executeQuery(sql)){
+			final ResultSetMetaData meta = rs.getMetaData();
+			final int columnCount = meta.getColumnCount();
+			while(rs.next()){
+				final Map<String, Object> row = Maps.newHashMap();
+				for(int i=1; i<=columnCount; i++){
+					row.put(meta.getColumnName(i), rs.getString(i));
+				}
+				r.add(row);
+			}
+			return r;
+		}catch(Exception e){
+			throw new IllegalArgumentException("查询sqlite失败", e);
+		}
+	}
+	
+	
+	
 	public static List<Map<String, String>> getAllByColumnNames_2(final Connection conn, final String tableName, final String[] columnNames , final String where, final String orderBy, final Long offset, final Long limit){
 		if(columnNames == null || columnNames.length <= 0){
 			throw new IllegalArgumentException();
@@ -329,6 +429,45 @@ public final class SqliteTools {
 			throw new IllegalArgumentException("查询sqlite失败", e);
 		}
 	}
+	
+	
+	public static List<Map<String, Object>> getAllByColumnNames_2_2(final Connection conn, final String tableName, final String[] columnNames , final String where, final String orderBy, final Long offset, final Long limit){
+		if(columnNames == null || columnNames.length <= 0){
+			throw new IllegalArgumentException();
+		}
+		final StringBuilder sqlBuilder = new StringBuilder();
+		sqlBuilder.append("select ").append(columnNamesStr(columnNames)).append(" from `").append(tableName).append("` ");
+		if(!Strings.isNullOrEmpty(where)){
+			sqlBuilder.append(" where ")/*.append(" where 1=1 ")*/.append(where).append(" ");
+		}
+		if(!Strings.isNullOrEmpty(orderBy)){
+			sqlBuilder.append(" ").append(orderBy).append(" ");
+		}
+		if(limit != null && limit >= 0){
+			sqlBuilder.append(" limit ").append(limit).append(" ");
+		}
+		if(offset != null && offset >= 0){
+			sqlBuilder.append(" offset ").append(offset).append(" ");
+		}
+		final String sql = sqlBuilder.toString();
+		final List<Map<String, Object>> r = Lists.newArrayList();
+		try (final Statement st = conn.createStatement();final ResultSet rs = st.executeQuery(sql)){
+//			final ResultSetMetaData meta = rs.getMetaData();
+//			final int columnCount = meta.getColumnCount();
+			while(rs.next()){
+				final Map<String, Object> row = Maps.newHashMap();
+				for(int i=1; i<=columnNames.length; i++){
+					row.put(columnNames[i-1], rs.getString(i));//这里不能用rs.getString(【columnNames[i]】)
+				}
+				r.add(row);
+			}
+			return r;
+		}catch(Exception e){
+			throw new IllegalArgumentException("查询sqlite失败", e);
+		}
+	}
+	
+	
 	
 	static boolean isNull(final int type){
 		return java.sql.Types.NULL == type;
