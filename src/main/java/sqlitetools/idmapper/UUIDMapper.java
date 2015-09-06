@@ -5,11 +5,17 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import sqlitetools.SqliteTools;
+
+import com.google.common.base.Joiner;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 
 /**
  * 1、这是【uuid, id】的一个映射。
@@ -102,6 +108,43 @@ public final class UUIDMapper {
 			throw new IllegalStateException(String.format("查询id=[%s]失败", id), e);
 		}
 	}
+	
+	
+	public Map<String, String> uuids(final List<Long> ids){
+		if(ids == null || ids.size() == 0){
+			return Maps.newHashMap();
+		}
+		final String sql = "select `id`,`uuid` from `uuidmapper` where `id` in ("+ Joiner.on(',').join(ids) + ") limit 1 offset 0 ";
+		try(final Connection conn = SqliteTools.conn(sqliteFilePath); final Statement st = conn.createStatement(); final ResultSet rs = st.executeQuery(sql)){
+			final Map<String, String> r = Maps.newHashMap();
+			for(;rs.next();){
+				r.put(rs.getString("id"), rs.getString("uuid"));
+			}
+			return r;
+		} catch (SQLException e) {
+//			logger.log(Level.SEVERE, String.format("插入新的uuid=[%s, %s]失败", uuid, id), e);
+			throw new IllegalStateException(String.format("查询id=[%s]失败", ids), e);
+		}
+	}
+	
+	
+	public Map<String, String> uuids_2(final List<String> ids){
+		if(ids == null || ids.size() == 0){
+			return Maps.newHashMap();
+		}
+		final String sql = "select `uuid` from `uuidmapper` where `id` in ("+ Joiner.on(',').join(ids) + ") limit 1 offset 0 ";
+		try(final Connection conn = SqliteTools.conn(sqliteFilePath); final Statement st = conn.createStatement(); final ResultSet rs = st.executeQuery(sql)){
+			final Map<String, String> r = Maps.newHashMap();
+			for(;rs.next();){
+				r.put(rs.getString("id"), rs.getString("uuid"));
+			}
+			return r;
+		} catch (SQLException e) {
+//			logger.log(Level.SEVERE, String.format("插入新的uuid=[%s, %s]失败", uuid, id), e);
+			throw new IllegalStateException(String.format("查询id=[%s]失败", ids), e);
+		}
+	}
+	
 	
 	
 	private String nextId(){
